@@ -25,6 +25,13 @@ void Linkstate::make_graph(string topofile)
 	}
 }
 
+void Linkstate::find_state()
+{
+		
+	
+	
+	
+}
 /*For testing purposes */
 void Linkstate::print_graph()
 {
@@ -40,6 +47,8 @@ void Linkstate::print_graph()
 		}
 	}
 }
+
+
 
 int main(int argc, char *argv[])
 {
