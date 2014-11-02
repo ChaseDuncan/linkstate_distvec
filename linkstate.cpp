@@ -32,6 +32,44 @@ void Linkstate::find_state()
 	
 	
 }
+
+void Linkstate::find_shortest_path(int source)
+{
+
+
+
+}
+
+void Linkstate:update_graph(string changesfile)
+{
+	ifstream infile(changesfile);
+	string line;
+	int ints[3];
+	
+	while(getline(infile, line))
+	{
+		istringstream iss(line);
+		int number;
+		int idx=0;
+		tuple<int, int, int>change();
+		while(iss >> number)
+		{
+			get<idx>(change)=number;
+			idx++;			
+		}
+
+		changes.push_back(change);
+	}	
+}
+void Linkstate::change_path_weight(int source, int neighbor, int weight)
+{
+	
+}
+
+void Linkstate::make_new_path(int source, int neighbor, int weight)
+{
+	
+}}
 /*For testing purposes */
 void Linkstate::print_graph()
 {
