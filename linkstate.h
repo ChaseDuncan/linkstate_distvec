@@ -26,12 +26,13 @@ class Linkstate
 		void parse_changes(string changesfile);
 		/*Functions for testing*/
 		void print_graph();
+		void print_routing_table(int source);
 
 	private:
 		/*source->neighbor->cost*/
 		unordered_map<int, vector<pair<int, int> > > graph;
 		/*source-> dest-> (predecessor*distance) */
-		unordered_map< int, unordered_map<int, vector<pair<int, int> > > > distances;
+		unordered_map< int, unordered_map<int, pair<int, int> > > distances;
 		/*source->neighbor->newcost*/
 		vector<tuple<int, int, int> > changes; //hello
 
