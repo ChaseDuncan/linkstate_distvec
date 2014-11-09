@@ -164,6 +164,37 @@ void Linkstate::print_routing_table(int source)
 
 }
 
+void Linkstate::print_routing_table()
+{
+	ofstream myfile;
+	myfile.open("output.txt");
+
+	//go through all nodes
+	for(auto source:distances){
+		int sourceint=source.first;
+		//need this to put the nodes on
+		priority_queue<int> pq;
+		//go through all destination
+		for(auto dest:(*source.second)){
+			int destint=dest.first;
+			pq.push((-1)*destint);
+		}
+		while(!pq.empty()){
+			int destint=(-1)*pq.top();
+			pq.pop();
+			int curhop=destint;
+			int prevcurhop=curhop;
+			int totaldist=(*source.second)[destint].first;
+			//go backwards
+			while(curhop!=sourceint){
+				prevcurhop=curhop;
+				curhop=(*source.second)[curhop].second;
+			}
+			myfile<<destint<<" "<<prevcurhop<<" "<<totaldist<<"\n";
+		}
+	}
+	myfile.close();
+}
 
 
 int main(int argc, char *argv[])
@@ -174,4 +205,5 @@ int main(int argc, char *argv[])
 	ls.parse_changes(argv[2]);
 	ls.find_shortest_path(2);
 	//ls.print_routing_table(2);
+	ls.print_routing_table();
 }
