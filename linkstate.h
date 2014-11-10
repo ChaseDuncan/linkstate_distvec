@@ -32,6 +32,7 @@ class Linkstate
 		void print_routing_table(ofstream & myfile);
 		void output_to_file(string message_file);
 		void print_message_path(ofstream & myfile, string message_file);
+		void populate_distances();
 
 	private:
 		/*source->cost*neighbor*/

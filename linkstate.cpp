@@ -55,7 +55,12 @@ void Linkstate::print_message_path(ofstream & myfile, string message_file)
 		string deststr=line.substr(srcidx+1, destidx-1);
 		int destint=atoi(deststr.c_str());
 		string message=line.substr(destidx+1);
-		
+		myfile<<"from "<<srcint<<" to "<<destint<<" hops";
+		vector<int> route=routing_table[srcint][destint];
+		for(int i=0;i<route.size()-1;i++){
+			myfile<<" "<<route[i];
+		}
+		myfile<<" "<<message<<"\n";
 	}
 
 }
@@ -215,6 +220,8 @@ void Linkstate::print_routing_table(ofstream & myfile)
 				prevcurhop=curhop;
 				curhop=(*source.second)[curhop].second;
 			}
+			//push on the source as that's the "first hop"'
+			routing_table[sourceint][destint].push_back(sourceint);
 			while(!backward_route.empty()){
 				int nextnode=backward_route.top();
 				backward_route.pop();
@@ -222,17 +229,23 @@ void Linkstate::print_routing_table(ofstream & myfile)
 			}
 			myfile<<destint<<" "<<prevcurhop<<" "<<totaldist<<"\n";
 		}
+		myfile<<"\n"<<endl;
 	}
 }
 
-
+void Linkstate::populate_distances()
+{
+	for(auto node : graph){
+		find_shortest_path(node.first);
+	}
+}
 int main(int argc, char *argv[])
 {
 	Linkstate ls;
 	ls.make_graph(argv[1]);	
 	//ls.print_graph();
 	ls.parse_changes(argv[2]);
-	ls.find_shortest_path(2);
+	ls.populate_distances();
 	//ls.print_routing_table(2);
 	ls.output_to_file(argv[3]);
 }
