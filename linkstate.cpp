@@ -34,6 +34,31 @@ void Linkstate::find_state()
 	
 }
 
+void Linkstate::output_to_file(string message_file)
+{
+	ofstream myfile;
+	myfile.open("output.txt");
+	print_routing_table(myfile);
+	print_message_path(myfile, message_file);
+	myfile.close();
+}
+
+void Linkstate::print_message_path(ofstream & myfile, string message_file)
+{
+	ifstream infile(message_file);
+	string line;
+	while(getline(infile, line)){
+		size_t srcidx=line.find(" ");
+		string srcstr=line.substr(0, srcidx);
+		int srcint=atoi(srcstr.c_str());
+		size_t destidx=line.find(" ", srcidx+1); //have to add one otherwise find same space
+		string deststr=line.substr(srcidx+1, destidx-1);
+		int destint=atoi(deststr.c_str());
+		string message=line.substr(destidx+1);
+		
+	}
+
+}
 void Linkstate::find_shortest_path(int source)
 {
 	unordered_map<int, bool> visited; //TRUE if visited, FALSE if not
@@ -140,7 +165,7 @@ void Linkstate::print_graph()
 	}
 }
 
-void Linkstate::print_routing_table(int source)
+/*void Linkstate::print_routing_table(int source)
 {
 	unordered_map< int, pair<int, int> >* table = distances[source];
 	for(unordered_map<int,  pair<int, int> >::iterator it = (*table).begin(); it != (*table).end(); it++)
@@ -162,13 +187,10 @@ void Linkstate::print_routing_table(int source)
 
 
 
-}
+}*/
 
-void Linkstate::print_routing_table()
+void Linkstate::print_routing_table(ofstream & myfile)
 {
-	ofstream myfile;
-	myfile.open("output.txt");
-
 	//go through all nodes
 	for(auto source:distances){
 		int sourceint=source.first;
@@ -185,15 +207,22 @@ void Linkstate::print_routing_table()
 			int curhop=destint;
 			int prevcurhop=curhop;
 			int totaldist=(*source.second)[destint].first;
+			//for filling out the routing table
+			stack<int> backward_route;
 			//go backwards
 			while(curhop!=sourceint){
+				backward_route.push(curhop);
 				prevcurhop=curhop;
 				curhop=(*source.second)[curhop].second;
+			}
+			while(!backward_route.empty()){
+				int nextnode=backward_route.top();
+				backward_route.pop();
+				routing_table[sourceint][destint].push_back(nextnode);
 			}
 			myfile<<destint<<" "<<prevcurhop<<" "<<totaldist<<"\n";
 		}
 	}
-	myfile.close();
 }
 
 
@@ -205,5 +234,5 @@ int main(int argc, char *argv[])
 	ls.parse_changes(argv[2]);
 	ls.find_shortest_path(2);
 	//ls.print_routing_table(2);
-	ls.print_routing_table();
+	ls.output_to_file(argv[3]);
 }

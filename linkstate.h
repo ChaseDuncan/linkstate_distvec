@@ -2,6 +2,7 @@
 #define LINKSTATE_H
 
 #include <iostream>
+#include <stack>
 #include <queue>
 #include <vector>
 #include <functional>
@@ -27,8 +28,10 @@ class Linkstate
 		void parse_changes(string changesfile);
 		/*Functions for testing*/
 		void print_graph();
-		void print_routing_table(int source);
-		void print_routing_table();
+		//void print_routing_table(int source);
+		void print_routing_table(ofstream & myfile);
+		void output_to_file(string message_file);
+		void print_message_path(ofstream & myfile, string message_file);
 
 	private:
 		/*source->cost*neighbor*/
@@ -37,6 +40,8 @@ class Linkstate
 		unordered_map< int, unordered_map<int, pair<int, int> >* > distances;
 		/*source->neighbor->newcost*/
 		vector<tuple<int, int, int> > changes;
+		/*source, dest, route*/
+		unordered_map<int, unordered_map<int, vector<int> > > routing_table;
 
 };
 
