@@ -34,13 +34,10 @@ void Linkstate::find_state()
 	
 }
 
-void Linkstate::output_to_file(string message_file)
+void Linkstate::output_to_file(ofstream & output, string message_file)
 {
-	ofstream myfile;
-	myfile.open("output.txt");
-	print_routing_table(myfile);
-	print_message_path(myfile, message_file);
-	myfile.close();
+	print_routing_table(output);
+	print_message_path(output, message_file);
 }
 
 void Linkstate::print_message_path(ofstream & myfile, string message_file)
@@ -112,17 +109,64 @@ void Linkstate::find_shortest_path(int source)
 	distances[source]=dist;
 }
 
-void Linkstate::update_graph()
+void Linkstate::update_graph(int ithchange)
 {
-	
+	int source=get<0>(changes[ithchange]);
+	int dest=get<1>(changes[ithchange]);
+	int newcost=get<2>(changes[ithchange]);
+	vector<pair<int, int> > vec = graph[source];
+	//deleted a node
+	if(newcost==-999){
+		for(int i=0;i<(graph[source]).size();i++){
+			//found edge, delete it
+			if(graph[source][i].second==dest){
+				cout<<"found edge between: "<<source<<" dest: "<<graph[source][i].first<<" updating cost: "<<graph[source][i].second<<endl;	
+				graph[source].erase((graph[source]).begin()+i);
+			}
+		}
+		//have to do the same for other edge
+		for(int i=0;i<graph[dest].size();i++){
+			if(graph[dest][i].second==source){
+				graph[dest].erase((graph[dest]).begin()+i);
+			}
+		}
+	}
+	//either insert a new edge or update weight
+	if(newcost!=-999){
+		bool found=false;
+		for(int i=0;i<vec.size();i++){
+			//found edge, update it
+			if(graph[source][i].second==dest){
+				found=true;
+				graph[source][i].second=newcost;
+			}
+		}
+		if(!found){
+			pair<int, int> p(newcost, dest);
+			graph[source].push_back(p);
+			pair<int, int> p2(newcost, source);
+			graph[dest].push_back(p2);
+		}
+		//have to do the same for other edge
+		else if(found){
+			for(int i=0;i<graph[dest].size();i++){
+				if(graph[dest][i].second==source){
+					graph[dest][i].second=newcost;
+				}
+			}
+		}	
+	}
 }
 
-void Linkstate::parse_changes(string changesfile)
+
+int  Linkstate::parse_changes(string changesfile)
 {
+	int num_changes=0;
 	ifstream infile(changesfile);
 	string line;
 	int ints[3];
-	vector<tuple<int, int, int> > tempchanges;
+	//vector<tuple<int, int, int> > tempchanges;
+	queue<tuple<int, int, int> >tempchanges;
 	while(getline(infile, line))
 	{
 		istringstream iss(line);
@@ -134,14 +178,16 @@ void Linkstate::parse_changes(string changesfile)
 			idx++;			
 		}
 		tuple<int,int,int>change(ints[0], ints[1], ints[2]);
-		tempchanges.push_back(change);
+		tempchanges.push(change);
 	}
 	//reverse the order, push into changes
 	while(!tempchanges.empty()){
-		tuple<int, int, int> temp=tempchanges.back();
+		num_changes+=1;
+		tuple<int, int, int> temp=tempchanges.front();
 		changes.push_back(temp);
-		tempchanges.pop_back();
+		tempchanges.pop();
 	}
+	return num_changes;
 }
 
 void Linkstate::change_path_weight(int source, int neighbor, int weight)
@@ -161,38 +207,14 @@ void Linkstate::print_graph()
 	{	
 		int src = it->first;
 		vector<pair<int, int> > vec = it->second;
-		for(int i = 0; i < vec.size(); i ++)
+		for(int i = 0; i < vec.size(); i++)
 		{
 			int dest = vec[i].first;
 			int wgt = vec[i].second;
-			cout<< src << dest << wgt << endl;
+			cout<< src <<" "<<dest <<" "<< wgt << endl;
 		}
 	}
 }
-
-/*void Linkstate::print_routing_table(int source)
-{
-	unordered_map< int, pair<int, int> >* table = distances[source];
-	for(unordered_map<int,  pair<int, int> >::iterator it = (*table).begin(); it != (*table).end(); it++)
-	{
-		pair<int, int> data = it->second;
-		int node = it->first;
-		int pred = data.first;
-		int distance = data.second;
-		int next_hop = node;
-		
-		while(pred != source)	
-		{
-			next_hop = pred;
-			pred = (*table)[pred].first;	
-		}
-
-		cout<< node<< " "<< next_hop<< " "<< distance<< endl;			
-	}
-
-
-
-}*/
 
 void Linkstate::print_routing_table(ofstream & myfile)
 {
@@ -220,6 +242,8 @@ void Linkstate::print_routing_table(ofstream & myfile)
 				prevcurhop=curhop;
 				curhop=(*source.second)[curhop].second;
 			}
+			//clear the vector as this might be the second call, for changes
+			routing_table[sourceint][destint].clear();
 			//push on the source as that's the "first hop"'
 			routing_table[sourceint][destint].push_back(sourceint);
 			while(!backward_route.empty()){
@@ -242,10 +266,20 @@ void Linkstate::populate_distances()
 int main(int argc, char *argv[])
 {
 	Linkstate ls;
+	ofstream output;
+	output.open("output.txt");
 	ls.make_graph(argv[1]);	
-	//ls.print_graph();
-	ls.parse_changes(argv[2]);
+	ls.print_graph();
+	int num_changes=ls.parse_changes(argv[2]);
 	ls.populate_distances();
-	//ls.print_routing_table(2);
-	ls.output_to_file(argv[3]);
+	ls.output_to_file(output, argv[3]);
+	//do all again for each change
+	for(int i=0;i<num_changes;i++){
+		cout<<"after "<<i<<"th change: "<<endl;
+		ls.print_graph();
+		ls.update_graph(i);
+		ls.populate_distances();
+		ls.output_to_file(output, argv[3]);
+	}
+	output.close();
 }

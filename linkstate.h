@@ -22,15 +22,16 @@ class Linkstate
 		void make_graph(string topofile);	
 		void find_state();
 		void find_shortest_path(int source);	
-		void update_graph();
+		void update_graph(int ithchange);
 		void change_path_weight(int source, int neighbor, int weight);
 		void make_new_path(int source, int neighbor, int weight);
-		void parse_changes(string changesfile);
+		//returns number of total changes
+		int parse_changes(string changesfile);
 		/*Functions for testing*/
 		void print_graph();
-		//void print_routing_table(int source);
 		void print_routing_table(ofstream & myfile);
-		void output_to_file(string message_file);
+		//routing table is updated inside of output_to_file
+		void output_to_file(ofstream & output, string message_file);
 		void print_message_path(ofstream & myfile, string message_file);
 		void populate_distances();
 
