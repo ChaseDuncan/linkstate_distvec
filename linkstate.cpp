@@ -57,7 +57,7 @@ void Linkstate::print_message_path(ofstream & myfile, string message_file)
 		for(int i=0;i<route.size()-1;i++){
 			myfile<<" "<<route[i];
 		}
-		myfile<<" "<<message<<"\n";
+		myfile<<" message "<<message<<"\n";
 	}
 
 }
@@ -248,6 +248,7 @@ void Linkstate::print_routing_table(ofstream & myfile)
 			routing_table[sourceint][destint].push_back(sourceint);
 			while(!backward_route.empty()){
 				int nextnode=backward_route.top();
+				cout<<"sourceint: "<<sourceint<<" nextnode: "<<nextnode<<endl;
 				backward_route.pop();
 				routing_table[sourceint][destint].push_back(nextnode);
 			}
@@ -259,8 +260,15 @@ void Linkstate::print_routing_table(ofstream & myfile)
 
 void Linkstate::populate_distances()
 {
+	//put in priority queue just so we can have correct output
+	priority_queue<int> pq;
 	for(auto node : graph){
-		find_shortest_path(node.first);
+		pq.push((node.first));
+	}
+	while(!pq.empty()){
+		int curnode=(pq.top());
+		pq.pop();
+		find_shortest_path(curnode);
 	}
 }
 int main(int argc, char *argv[])
