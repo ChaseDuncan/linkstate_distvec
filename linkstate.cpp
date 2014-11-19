@@ -120,7 +120,6 @@ void Linkstate::update_graph(int ithchange)
 		for(int i=0;i<(graph[source]).size();i++){
 			//found edge, delete it
 			if(graph[source][i].second==dest){
-				cout<<"found edge between: "<<source<<" dest: "<<graph[source][i].first<<" updating cost: "<<graph[source][i].second<<endl;	
 				graph[source].erase((graph[source]).begin()+i);
 			}
 		}
@@ -248,7 +247,6 @@ void Linkstate::print_routing_table(ofstream & myfile)
 			routing_table[sourceint][destint].push_back(sourceint);
 			while(!backward_route.empty()){
 				int nextnode=backward_route.top();
-				cout<<"sourceint: "<<sourceint<<" nextnode: "<<nextnode<<endl;
 				backward_route.pop();
 				routing_table[sourceint][destint].push_back(nextnode);
 			}
@@ -283,7 +281,6 @@ int main(int argc, char *argv[])
 	ls.output_to_file(output, argv[3]);
 	//do all again for each change
 	for(int i=0;i<num_changes;i++){
-		cout<<"after "<<i<<"th change: "<<endl;
 		ls.print_graph();
 		ls.update_graph(i);
 		ls.populate_distances();
