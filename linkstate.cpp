@@ -20,9 +20,9 @@ void Linkstate::make_graph(string topofile)
 			idx++;
 		}
 			
-		pair<int, int> edge_1(ints[1], ints[2]);
+		pair<int, int> edge_1(ints[2], ints[1]);
 		graph[ints[0]].push_back(edge_1);	
-		pair<int, int> edge_2(ints[0], ints[2]);
+		pair<int, int> edge_2(ints[2], ints[0]);
 		graph[ints[1]].push_back(edge_2);
 	}
 }
@@ -34,83 +34,138 @@ void Linkstate::find_state()
 	
 }
 
+void Linkstate::output_to_file(ofstream & output, string message_file)
+{
+	print_routing_table(output);
+	print_message_path(output, message_file);
+}
+
+void Linkstate::print_message_path(ofstream & myfile, string message_file)
+{
+	ifstream infile(message_file);
+	string line;
+	while(getline(infile, line)){
+		size_t srcidx=line.find(" ");
+		string srcstr=line.substr(0, srcidx);
+		int srcint=atoi(srcstr.c_str());
+		size_t destidx=line.find(" ", srcidx+1); //have to add one otherwise find same space
+		string deststr=line.substr(srcidx+1, destidx-1);
+		int destint=atoi(deststr.c_str());
+		string message=line.substr(destidx+1);
+		myfile<<"from "<<srcint<<" to "<<destint<<" hops";
+		vector<int> route=routing_table[srcint][destint];
+		for(int i=0;i<route.size()-1;i++){
+			myfile<<" "<<route[i];
+		}
+		myfile<<" message "<<message<<"\n";
+	}
+
+}
 void Linkstate::find_shortest_path(int source)
-{	
-	/*For sytantic simplicity we get references to 
-	  the dictionary and the vector that we need*/
-	unordered_map<int, pair<int, int> >* map = &distances[source];	
-	vector<pair<int, int> >* neighbors = &graph[source];
-	
-	//put source in the map
-	pair<int, int> src(source, 0);
-	(*map)[source] = src;
-
-	priority_queue<tuple<int, int, int> > pq;
-	int predecessor = source;	
-
-	//initialize priority queue
-	cout<< "size of neighbors is "<< (*neighbors).size()<<endl;
-	for(int i = 0; i < (*neighbors).size(); i++)
-	{
-		//grab the next neighbor
-		pair<int, int> next = (*neighbors)[i];
-		//make a new pair of (weight*node) to and add it to the prioity queue
-		cout<< "curr_node: "<< next.first<< " weight: "<< next.second<< " pred: "<< predecessor<< endl;
-
-		tuple<int, int, int> np(next.second,  next.first, predecessor);		
-		pq.push(np);
-	}	
-	
-	//main loop
-	while(!pq.empty())
-	{
-		//get next best (weight*node*predecessor)
-		tuple<int, int, int> best = pq.top();		
+{
+	unordered_map<int, bool> visited; //TRUE if visited, FALSE if not
+	unordered_map<int, pair<int, int> > * dist=new unordered_map<int, pair<int, int> >;//copy over to &distances[source];
+	pair<int, int> srcnode(0, source); //predecessor distance
+	(*dist)[source]=srcnode;
+	priority_queue<pair<int, int> > pq;
+	pq.push(srcnode);
+	for(auto val : graph){
+		if(val.first!=source){
+			pair<int, int> n(INT_MIN+1, val.first);
+			pair<int, int>nn(INT_MAX, val.first);
+			(*dist)[val.first]=nn;
+			pq.push(n); //add all the nodes
+		}
+	}
+	int predecessor=source;
+	while(!pq.empty()){
+		pair<int, int> curnode = pq.top();
+		curnode.first=(-1)*curnode.first;
 		pq.pop();
+		int curnodeint=curnode.second;
+		visited[curnodeint]=true;
+		vector<pair<int, int> > * neighbors=&graph[curnodeint];
+		for(int i=0;i<neighbors->size();i++){
+			int neighborint=(*neighbors)[i].second;
+			//default value of bool is false, so don't have to worry about new entry'
+			if(!visited[neighborint]){
+				int potentialnewdist=INT_MAX;
+				if(curnode.first!=INT_MAX){
+					potentialnewdist=curnode.first + (*neighbors)[i].first;
+				}
+				if (potentialnewdist < (*dist)[neighborint].first){
+					(*dist)[neighborint].first=potentialnewdist;
+					(*dist)[neighborint].second=curnodeint;
+					pair<int, int> neighbor_despair((-1)*(*dist)[neighborint].first, neighborint);
+					pq.push(neighbor_despair);
+				}
+			}
+		}
+	}
+	if(distances[source]!=NULL){
+		delete distances[source];
+		distances[source]=NULL;
+	}
+	distances[source]=dist;
+}
 
-		int curr_node = get<1>(best);
-		int curr_weight = get<0>(best);
-		int curr_pred = get<2>(best);
-		
-		/*check to see if current node being considerd has already logged*/
-		if((*map).find(curr_node)==(*map).end())
-		{
-			pair<int, int>	temp(curr_pred, curr_weight);
-			(*map)[curr_node] = temp;
-		}	
-
-		//grab the vector for neighbors of best
-		vector<pair<int, int> >* best_neighbors = &graph[curr_node];
-		predecessor = curr_node;
-
-		//add best's neighbors to the priority queue
-		for(int i = 0; i < (*best_neighbors).size(); i++)
-		{
-			//grab the next neighbor
-			pair<int, int> next = (*best_neighbors)[i];
-			cout<< "curr_node: "<< next.first<< " weight: "<< next.second<< " pred: "<< predecessor<< endl;
-			//make a new pair of (weight*node) to and add it to the prioity queue
-			
-			if((*map).find(curr_node)==(*map).end())
-			{
-				tuple<int, int, int> np(next.second,  next.first, predecessor);		
-				pq.push(np);
+void Linkstate::update_graph(int ithchange)
+{
+	int source=get<0>(changes[ithchange]);
+	int dest=get<1>(changes[ithchange]);
+	int newcost=get<2>(changes[ithchange]);
+	vector<pair<int, int> > vec = graph[source];
+	//deleted a node
+	if(newcost==-999){
+		for(int i=0;i<(graph[source]).size();i++){
+			//found edge, delete it
+			if(graph[source][i].second==dest){
+				graph[source].erase((graph[source]).begin()+i);
+			}
+		}
+		//have to do the same for other edge
+		for(int i=0;i<graph[dest].size();i++){
+			if(graph[dest][i].second==source){
+				graph[dest].erase((graph[dest]).begin()+i);
+			}
+		}
+	}
+	//either insert a new edge or update weight
+	if(newcost!=-999){
+		bool found=false;
+		for(int i=0;i<vec.size();i++){
+			//found edge, update it
+			if(graph[source][i].second==dest){
+				found=true;
+				graph[source][i].second=newcost;
+			}
+		}
+		if(!found){
+			pair<int, int> p(newcost, dest);
+			graph[source].push_back(p);
+			pair<int, int> p2(newcost, source);
+			graph[dest].push_back(p2);
+		}
+		//have to do the same for other edge
+		else if(found){
+			for(int i=0;i<graph[dest].size();i++){
+				if(graph[dest][i].second==source){
+					graph[dest][i].second=newcost;
+				}
 			}
 		}	
 	}
 }
 
-void Linkstate::update_graph()
-{
-	
-}
 
-void Linkstate::parse_changes(string changesfile)
+int  Linkstate::parse_changes(string changesfile)
 {
+	int num_changes=0;
 	ifstream infile(changesfile);
 	string line;
 	int ints[3];
-	vector<tuple<int, int, int> > tempchanges;
+	//vector<tuple<int, int, int> > tempchanges;
+	queue<tuple<int, int, int> >tempchanges;
 	while(getline(infile, line))
 	{
 		istringstream iss(line);
@@ -122,14 +177,16 @@ void Linkstate::parse_changes(string changesfile)
 			idx++;			
 		}
 		tuple<int,int,int>change(ints[0], ints[1], ints[2]);
-		tempchanges.push_back(change);
+		tempchanges.push(change);
 	}
 	//reverse the order, push into changes
 	while(!tempchanges.empty()){
-		tuple<int, int, int> temp=tempchanges.back();
+		num_changes+=1;
+		tuple<int, int, int> temp=tempchanges.front();
 		changes.push_back(temp);
-		tempchanges.pop_back();
+		tempchanges.pop();
 	}
+	return num_changes;
 }
 
 void Linkstate::change_path_weight(int source, int neighbor, int weight)
@@ -149,47 +206,85 @@ void Linkstate::print_graph()
 	{	
 		int src = it->first;
 		vector<pair<int, int> > vec = it->second;
-		for(int i = 0; i < vec.size(); i ++)
+		for(int i = 0; i < vec.size(); i++)
 		{
 			int dest = vec[i].first;
 			int wgt = vec[i].second;
-			cout<< src << dest << wgt << endl;
+			cout<< src <<" "<<dest <<" "<< wgt << endl;
 		}
 	}
 }
 
-void Linkstate::print_routing_table(int source)
+void Linkstate::print_routing_table(ofstream & myfile)
 {
-	unordered_map< int, pair<int, int> >* table = &distances[source];
-	for(unordered_map<int,  pair<int, int> >::iterator it = (*table).begin(); it != (*table).end(); it++)
-	{
-		pair<int, int> data = it->second;
-		int node = it->first;
-		int pred = data.first;
-		int distance = data.second;
-		int next_hop = node;
-		
-		while(pred != source)	
-		{
-			next_hop = pred;
-			pred = (*table)[pred].first;	
+	//go through all nodes
+	for(auto source:distances){
+		int sourceint=source.first;
+		//need this to put the nodes on
+		priority_queue<int> pq;
+		//go through all destination
+		for(auto dest:(*source.second)){
+			int destint=dest.first;
+			pq.push((-1)*destint);
 		}
-
-		cout<< node<< " "<< next_hop<< " "<< distance<< endl;			
+		while(!pq.empty()){
+			int destint=(-1)*pq.top();
+			pq.pop();
+			int curhop=destint;
+			int prevcurhop=curhop;
+			int totaldist=(*source.second)[destint].first;
+			//for filling out the routing table
+			stack<int> backward_route;
+			//go backwards
+			while(curhop!=sourceint){
+				backward_route.push(curhop);
+				prevcurhop=curhop;
+				curhop=(*source.second)[curhop].second;
+			}
+			//clear the vector as this might be the second call, for changes
+			routing_table[sourceint][destint].clear();
+			//push on the source as that's the "first hop"'
+			routing_table[sourceint][destint].push_back(sourceint);
+			while(!backward_route.empty()){
+				int nextnode=backward_route.top();
+				backward_route.pop();
+				routing_table[sourceint][destint].push_back(nextnode);
+			}
+			myfile<<destint<<" "<<prevcurhop<<" "<<totaldist<<"\n";
+		}
+		myfile<<"\n"<<endl;
 	}
-
-
-
 }
 
-
-
+void Linkstate::populate_distances()
+{
+	//put in priority queue just so we can have correct output
+	priority_queue<int> pq;
+	for(auto node : graph){
+		pq.push((node.first));
+	}
+	while(!pq.empty()){
+		int curnode=(pq.top());
+		pq.pop();
+		find_shortest_path(curnode);
+	}
+}
 int main(int argc, char *argv[])
 {
 	Linkstate ls;
+	ofstream output;
+	output.open("output.txt");
 	ls.make_graph(argv[1]);	
 	ls.print_graph();
-	ls.parse_changes(argv[2]);
-	ls.find_shortest_path(2);
-	ls.print_routing_table(2);
+	int num_changes=ls.parse_changes(argv[2]);
+	ls.populate_distances();
+	ls.output_to_file(output, argv[3]);
+	//do all again for each change
+	for(int i=0;i<num_changes;i++){
+		ls.print_graph();
+		ls.update_graph(i);
+		ls.populate_distances();
+		ls.output_to_file(output, argv[3]);
+	}
+	output.close();
 }
