@@ -198,6 +198,13 @@ void Distvec::update_graph_and_edges(int ithchange)
 				graph[dest].erase((graph[dest]).begin()+i);
 			}
 		}
+		//for deubugging
+		/*cout<<"in update graph";
+		for(int i=0;i<edges.size();i++){
+			int src=get<0>(edges[i]);
+			int dest=get<2>(edges[i]);
+			cout<<"src: "<<src<<" dest: "<<dest<<endl;
+		}*/
 		delete_edge(source, dest);
 	}
 	//insert or update weight
@@ -247,13 +254,21 @@ void Distvec::update_edge(int source, int dest, int newcost)
 }
 void Distvec::delete_edge(int source, int dest)
 {
+	priority_queue<int> tobedeleted;
 	//since the graph is undirected, we'll have to delete both sets of edges
 	for(int i=0;i<edges.size();i++){
 		int cursrc=get<0>(edges[i]);
 		int curdest=get<2>(edges[i]);
-		if((cursrc==source && curdest==dest)){
-			edges.erase((edges.begin()+i));	
+		if((cursrc==source && curdest==dest) || (cursrc==dest && curdest==source)){
+			tobedeleted.push(i);
+			//edges.erase((edges.begin()+i));	
 		}
+		//cout<<"at idx ten: "<<get<0>(edges[10])<<" second: "<<get<2>(edges[10])<<endl;
+	}
+	while(!tobedeleted.empty()){
+		int idx=tobedeleted.top();
+		tobedeleted.pop();
+		edges.erase((edges.begin()+idx));
 	}
 }
 /*just for testing purposes*/
@@ -288,17 +303,24 @@ int main(int argc, char *argv[])
 	ofstream output;
 	output.open("output.txt");
 	dv.make_graph_and_list_edges(argv[1]);
+	//cout<<"print graph:"<<endl;
 	//dv.print_graph();
 	int num_changes=dv.parse_changes(argv[3]);
 	dv.populate_distances();
 	dv.output_to_file(output, argv[2]);
 	//do everything again for each change
 	for(int i=0;i<num_changes;i++){
+		cout<<"print graph: "<<endl;
 		dv.print_graph();
+		//cout<<"print edges: "<<endl;
+		//dv.print_edges();
 		dv.update_graph_and_edges(i);
 		dv.populate_distances();
 		dv.output_to_file(output, argv[2]);
 	}
+	//cout<<"final graph: "<<endl;
+	//dv.print_graph();
+	//cout<<"edges: "<<endl;
 	//dv.print_edges();
 	output.close();
 	
