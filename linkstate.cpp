@@ -274,17 +274,17 @@ int main(int argc, char *argv[])
 	Linkstate ls;
 	ofstream output;
 	output.open("output.txt");
-	ls.make_graph(argv[1]);	
+	ls.make_graph(argv[1]);//topo.txt	
 	ls.print_graph();
-	int num_changes=ls.parse_changes(argv[2]);
+	int num_changes=ls.parse_changes(argv[3]);//changes
 	ls.populate_distances();
-	ls.output_to_file(output, argv[3]);
+	ls.output_to_file(output, argv[2]);//message
 	//do all again for each change
 	for(int i=0;i<num_changes;i++){
 		ls.print_graph();
 		ls.update_graph(i);
 		ls.populate_distances();
-		ls.output_to_file(output, argv[3]);
+		ls.output_to_file(output, argv[2]);
 	}
 	output.close();
 }

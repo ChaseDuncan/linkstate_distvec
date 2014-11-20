@@ -289,15 +289,15 @@ int main(int argc, char *argv[])
 	output.open("output.txt");
 	dv.make_graph_and_list_edges(argv[1]);
 	//dv.print_graph();
-	int num_changes=dv.parse_changes(argv[2]);
+	int num_changes=dv.parse_changes(argv[3]);
 	dv.populate_distances();
-	dv.output_to_file(output, argv[3]);
+	dv.output_to_file(output, argv[2]);
 	//do everything again for each change
 	for(int i=0;i<num_changes;i++){
 		dv.print_graph();
 		dv.update_graph_and_edges(i);
 		dv.populate_distances();
-		dv.output_to_file(output, argv[3]);
+		dv.output_to_file(output, argv[2]);
 	}
 	//dv.print_edges();
 	output.close();
